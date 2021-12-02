@@ -37,10 +37,14 @@ jobs:
           cd $GITHUB_WORKSPACE
 
           repo_name=$(basename ${GITHUB_REPOSITORY})
-          # project_name="$(echo ${repo_name} | cut -d '-' -f 3)"
-          # name_of_artifact="${project_name}.zip"
+          # HARD CODED STUFF!!!!!!
           project_name="gilead-dx-lamp.zip"
           product_name="lamp"
+          name_of_artifact="${project_name}.zip"
+          
+          # project_name="$(echo ${repo_name} | cut -d '-' -f 3)"
+          # name_of_artifact="${project_name}.zip"
+
           
 
           key_prefix="${ACC_NAME}/${product_name}/${project_name}"
