@@ -39,7 +39,7 @@ jobs:
 
           repo_name=$(basename ${GITHUB_REPOSITORY})
           # HARD CODED STUFF!!!!!!
-          project_name="gilead-dx-lamp.zip"
+          project_name="hepdelta"
           product_name="lamp"
           name_of_artifact="${project_name}.zip"
           
@@ -68,16 +68,16 @@ jobs:
 
             done
           fi
-
+          # Zip the contents of the current directory
           zip -qr ${name_of_artifact} .
-
-          if [ -z "${DEV_SS_S3}" ]; then
-            new_obj_ver=$(aws s3api put-object --bucket "${DES_S3}" --key "${key_prefix}/${name_of_artifact}"  --body "${name_of_artifact}" --server-side-encryption "AES256" --tagging "env=dev" --query "VersionId" --output text)
-          else
-            new_obj_ver=$(aws s3api put-object --bucket "${DES_S3}" --key "${key_prefix}/${name_of_artifact}"  --body "${name_of_artifact}" --server-side-encryption "AES256" --tagging "env=dev&ss_bucket=${DEV_SS_S3}&repository_name=${repo_name}" --query "VersionId" --output text)
-          fi
-
+          # Upload the Zipped File into the desired directory
+          new_obj_ver=$(aws s3api put-object --bucket "${DES_S3}" --key "${key_prefix}/${name_of_artifact}"  --body "${name_of_artifact}" --server-side-encryption "AES256" --tagging "env=dev" --query "VersionId" --output text)
+          # Delete contents of existing directory
+          aws s3 rm s3://${DES_S3}/${key_prefix}/ --recursive
+          # Copy all the files to the project directory but do not touch the zip file
+          aws s3 cp . s3://${DES_S3}/${key_prefix}/ --exclude "*.zip"
           echo "Sucessfully placed zip in S3! New version Id: ${new_obj_ver}"
+          
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
         run: |
