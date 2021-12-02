@@ -7,23 +7,79 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-
+env:
+  DES_S3: "gilead-aws-devops-artifacts-us-west-2"
+  ACC_NAME: "shared-services"
+ 
+  
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  # This workflow will upload the zipped content of the repo to S3 and run an AWS datasync task to copy to EFS
+  s3upload:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # Checks-out your repository from the specified branch
+      - name: Check out code from ${{ github.ref }}
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref }}
+          
+      # Uploads the file to S3
+      - name: Publish repository zip to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          
+        run: |
+          cd $GITHUB_WORKSPACE
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+          repo_name=$(basename ${GITHUB_REPOSITORY})
+          # project_name="$(echo ${repo_name} | cut -d '-' -f 3)"
+          # name_of_artifact="${project_name}.zip"
+          
+          # Hard Coded Stuff here
+          project_name = hepdelta
+          product_name="lamp"
+          
 
+          key_prefix="${ACC_NAME}/${product_name}/${project_name}"
+
+          if aws s3 ls s3://${DES_S3}/${key_prefix}/ | grep -q "${name_of_artifact}"
+          then
+            version_list=($(aws s3api list-object-versions --bucket "${DES_S3}" --prefix "${key_prefix}/${name_of_artifact}" --query "Versions[*].VersionId" --output text))
+
+            for curr_version in "${version_list[@]}"
+            do
+              if [ "$curr_version" != "None" ]; then
+                env_tag_value=$(aws s3api get-object-tagging --bucket "${DES_S3}" --key "${key_prefix}/${name_of_artifact}" --version-id "${curr_version}" --query "TagSet[?Key=='env'].Value" --output text)
+
+                if [ "$env_tag_value" == "dev" ]; then
+                  aws s3api delete-object-tagging --bucket "${DES_S3}" --key "${key_prefix}/${name_of_artifact}" --version-id "${curr_version}" > /dev/null
+                  echo "Removed tags from version ID: ${curr_version}"
+                  break
+                fi
+              fi
+            done
+          fi
+
+          zip -qr ${name_of_artifact} .
+
+          if [ -z "${DEV_SS_S3}" ]; then
+            new_obj_ver=$(aws s3api put-object --bucket "${DES_S3}" --key "${key_prefix}/${name_of_artifact}"  --body "${name_of_artifact}" --server-side-encryption "AES256" --tagging "env=dev" --query "VersionId" --output text)
+          else
+            new_obj_ver=$(aws s3api put-object --bucket "${DES_S3}" --key "${key_prefix}/${name_of_artifact}"  --body "${name_of_artifact}" --server-side-encryption "AES256" --tagging "env=dev&ss_bucket=${DEV_SS_S3}&repository_name=${repo_name}" --query "VersionId" --output text)
+          fi
+
+
+          echo "Sucessfully placed zip in S3! New version Id: ${new_obj_ver}"
+
+          echo "::set-output name=ispublished::true"
+          echo "::set-output name=artifactprefix::${key_prefix}/${name_of_artifact}"
+          echo "::set-output name=versionid::${new_obj_ver}"
+        continue-on-error: true
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
         run: |
