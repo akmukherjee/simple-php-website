@@ -39,7 +39,7 @@ jobs:
           repo_name=$(basename ${GITHUB_REPOSITORY})
           # project_name="$(echo ${repo_name} | cut -d '-' -f 3)"
           # name_of_artifact="${project_name}.zip"
-          project_name = "gilead-dx-lamp.zip"
+          project_name="gilead-dx-lamp.zip"
           product_name="lamp"
           
 
