@@ -75,7 +75,7 @@ jobs:
           # Delete contents of existing directory
           aws s3 rm s3://${DES_S3}/${key_prefix}/ --recursive --exclude "*.zip"
           # Copy all the files to the project directory but do not touch the zip file
-          aws s3 cp . s3://${DES_S3}/${key_prefix}/unzipped --recursive  --exclude "*.zip" --exclude .git*/*"
+          aws s3 cp . s3://${DES_S3}/${key_prefix}/unzipped --recursive  --exclude "*.zip" --exclude ".git*/*"
           echo "Sucessfully placed zip in S3! New version Id: ${new_obj_ver}"
           
       # Runs a set of commands using the runners shell
