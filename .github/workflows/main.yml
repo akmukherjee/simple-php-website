@@ -8,7 +8,7 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 env:
-  DES_S3: "fargate-dev-poc-alb-logs"
+  DES_S3: "fargate-poc-artifacts"
   ACC_NAME: "shared-services"
  
   
